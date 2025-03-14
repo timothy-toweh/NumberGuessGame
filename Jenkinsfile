@@ -1,59 +1,54 @@
 pipeline {
-    agent none
-
+    agent {
+        label 'build-node'
+    }
     stages {
-        stage('Clone Repository') {
-            agent { label 'build-node' }
+        stage('Checkout') {
             steps {
-                checkout([
-                    $class: 'GitSCM', 
-                    branches: [[name: '*/main']], 
-                    userRemoteConfigs: [[url: 'https://github.com/timothy-toweh/NumberGuessGame']]
-                ])
+                echo 'Checking out source code'
+                checkout scm
             }
         }
-
         stage('Build') {
-            agent { label 'build-node' }
             steps {
-                sh 'mvn clean package'
-                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                echo 'Building the application'
+                // Define build steps here
+                sh '/opt/maven/bin/mvn clean package'
             }
         }
-
         stage('Test') {
-            agent { label 'build-node' }
             steps {
+                echo 'Running tests'
+                // Define test steps here
                 sh 'mvn test'
+                stash (name: 'NumberGuessGame', includes: "target/*.war")
             }
         }
-
         stage('Deploy') {
-            agent { label 'deploy-node' }
+            agent {
+                label 'deploy-node'
+            }
             steps {
-                copyArtifacts(projectName: 'test', filter: 'target/*.war', flatten: true)
-                sh '''
-                TOMCAT_DIR=/opt/tomcat9/webapps
-                WAR_FILE=NumberGuessGame.war
-                
-                if [ -f "$WAR_FILE" ]; then
-                    cp $WAR_FILE $TOMCAT_DIR/
-                    echo "Deployment successful!"
-                else
-                    echo "WAR file not found!"
-                    exit 1
-                fi
-                '''
+                echo 'Deploying the application'
+                // Define deployment steps here
+                unstash 'NumberGuessGame'
+                sh "sudo rm -rf ~/apache*/webapps/*.war"
+                sh "sudo mv target/*.war ~/apache*/webapps/"
+                sh "sudo systemctl daemon-reload"
+                sh "sudo ~/apache*/bin/shutdown.sh && sudo ~/apache*/bin/startup.sh"
             }
         }
     }
-
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            mail to: "timothytoweh1@gmail.com",
+            subject: "Jenkins CI-CD Successful",
+            body: "Jenkins CI-CD was successfully built, tested, and deployed"
         }
         failure {
-            echo 'Pipeline failed! Check the logs for details.'
+            mail to: "timothytoweh1@gmail.com",
+            subject: "Jenkins CI-CD Failed",
+            body: "Jenkins CI-CD failed, please investigate"
         }
     }
 }
