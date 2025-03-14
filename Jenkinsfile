@@ -74,20 +74,20 @@ pipeline {
                     echo "Deploying to Apache Tomcat on the deploy node..."
                     sh """
                         # Stop Tomcat using Catalina script
-                        sudo /usr/share/tomcat/bin/shutdown.sh || true
-                        
+                        sudo /home/ec2-user/apache-tomcat-9.0.102/bin/shutdown.sh || true
+
                         # Wait for Tomcat to fully shut down
                         sleep 5
-                        
+
                         # Remove old deployment
-                        sudo rm -rf ${DEPLOY_DIR}ROOT.war
-                        sudo rm -rf ${DEPLOY_DIR}ROOT/
-                        
-                        # Deploy new war file
-                        sudo cp target/*.war ${DEPLOY_DIR}ROOT.war
-                        
-                        # Start Tomcat
-                        sudo /usr/share/tomcat/bin/startup.sh
+                        sudo rm -rf /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT.war
+                        sudo rm -rf /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT/
+
+                        # Move the new WAR file
+                        sudo mv /home/ec2-user/*.war /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT.war
+
+                        # Start Tomcat using Catalina script
+                        sudo /home/ec2-user/apache-tomcat-9.0.102/bin/startup.sh
                     """
                 }
             }
