@@ -3,18 +3,20 @@ pipeline {
 
     stages {
         stage('Build') {
-            agent { label 'build-node' }  // Run build on build-node
+            agent { label 'build-node' }
             steps {
                 sh 'mvn clean package'  // Build the WAR file
-                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true  // Store WAR file
             }
         }
 
         stage('Deploy to Tomcat') {
-            agent { label 'deploy-node' }  // Deploy directly on the Tomcat server
+            agent { label 'deploy-node' }
             steps {
+                copyArtifacts projectName: 'test', filter: 'target/*.war', flatten: true  // Fetch WAR file
+
                 sh '''
-                cp target/*.war /home/ec2-user/apache-tomcat-9.0.102/webapps/
+                cp *.war /home/ec2-user/apache-tomcat-9.0.102/webapps/
                 /home/ec2-user/apache-tomcat-9.0.102/bin/shutdown.sh
                 sleep 5
                 /home/ec2-user/apache-tomcat-9.0.102/bin/startup.sh
