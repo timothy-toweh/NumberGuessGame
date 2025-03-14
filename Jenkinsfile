@@ -36,25 +36,26 @@ pipeline {
         }
 
         stage('Unit Tests') {
-    agent { label 'build-node' }
-    steps {
-        script {
-            echo "Running unit tests..."
-            sh 'mvn test'
-        }
-    }
-    post {
-        always {
-            script {
-                def testResults = sh(script: "ls -1 target/surefire-reports/*.xml 2>/dev/null | wc -l", returnStdout: true).trim()
-                if (testResults.toInteger() > 0) {
-                    junit '**/target/surefire-reports/*.xml'
-                } else {
-                    echo "No test results found. Skipping JUnit report."
+            agent { label 'build-node' }
+            steps {
+                script {
+                    echo "Running unit tests..."
+                    sh 'mvn test'
+                }
+            }
+            post {
+                always {
+                    script {
+                        def testResults = sh(script: "ls -1 target/surefire-reports/*.xml 2>/dev/null | wc -l", returnStdout: true).trim()
+                        if (testResults.toInteger() > 0) {
+                            junit '**/target/surefire-reports/*.xml'
+                        } else {
+                            echo "No test results found. Skipping JUnit report."
+                        }
+                    }
                 }
             }
         }
-
 
         stage('Archive Artifacts') {
             agent { label 'build-node' }
@@ -67,34 +68,31 @@ pipeline {
         }
 
         stage('Deploy to Tomcat') {
-    agent { label 'deploy-node' }
-    steps {
-        script {
-            echo "Deploying to Apache Tomcat on the deploy node..."
-            sh """
-                # Stop Tomcat using Catalina script
-                sudo /usr/share/tomcat/bin/shutdown.sh || true
-                
-                # Wait for Tomcat to fully shut down
-                sleep 5
-                
-                # Remove old deployment
-                sudo rm -rf ${DEPLOY_DIR}ROOT.war
-                sudo rm -rf ${DEPLOY_DIR}ROOT/
-                
-                # Deploy new war file
-                sudo cp target/*.war ${DEPLOY_DIR}ROOT.war
-                
-                # Start Tomcat
-                sudo /usr/share/tomcat/bin/startup.sh
-            """
-        }
-    }
-}
+            agent { label 'deploy-node' }
+            steps {
+                script {
+                    echo "Deploying to Apache Tomcat on the deploy node..."
+                    sh """
+                        # Stop Tomcat using Catalina script
+                        sudo /usr/share/tomcat/bin/shutdown.sh || true
+                        
+                        # Wait for Tomcat to fully shut down
+                        sleep 5
+                        
+                        # Remove old deployment
+                        sudo rm -rf ${DEPLOY_DIR}ROOT.war
+                        sudo rm -rf ${DEPLOY_DIR}ROOT/
+                        
+                        # Deploy new war file
+                        sudo cp target/*.war ${DEPLOY_DIR}ROOT.war
+                        
+                        # Start Tomcat
+                        sudo /usr/share/tomcat/bin/startup.sh
+                    """
                 }
             }
-        
-    
+        }
+    }
 
     post {
         success {
@@ -110,3 +108,4 @@ pipeline {
                  body: "The build and deployment of ${APP_NAME} failed. Please check the logs."
         }
     }
+}
