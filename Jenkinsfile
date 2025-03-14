@@ -30,12 +30,12 @@ pipeline {
             }
             steps {
                 echo 'Deploying the application'
-                // Define deployment steps here
                 unstash 'NumberGuessGame'
-                sh "sudo rm -rf ~/apache*/webapps/*.war"
-                sh "sudo mv target/*.war ~/apache*/webapps/"
+                sh "sudo rm -rf /home/ec2-user/apache-tomcat-9.0.102/webapps/*.war"
+                sh "sudo mv target/NumberGuessGame-1.0-SNAPSHOT.war /home/ec2-user/apache-tomcat-9.0.102/webapps/"
                 sh "sudo systemctl daemon-reload"
-                sh "sudo ~/apache*/bin/shutdown.sh && sudo ~/apache*/bin/startup.sh"
+                sh "sudo /home/ec2-user/apache-tomcat-9.0.102/bin/shutdown.sh"
+                sh "sudo /home/ec2-user/apache-tomcat-9.0.102/bin/startup.sh"
             }
         }
     }
