@@ -5,7 +5,7 @@ pipeline {
         APP_NAME = "NumberGuessGame"
         GIT_REPO = "https://github.com/timothy-toweh/NumberGuessGame.git"
         MAVEN_OPTS = "-Dmaven.test.failure.ignore=true"
-        DEPLOY_DIR = "/opt/tomcat/webapps/"
+        DEPLOY_DIR = "/home/ec2-user/apache-tomcat-9.0.102/webapps/"
     }
 
     stages {
@@ -25,12 +25,6 @@ pipeline {
                 script {
                     echo "Building the Java web application using Maven..."
                     sh 'mvn clean package -DskipTests'
-                }
-            }
-            post {
-                failure {
-                    echo "Build failed. Check the logs!"
-                    error "Stopping pipeline due to failed build!"
                 }
             }
         }
@@ -57,12 +51,12 @@ pipeline {
             }
         }
 
-        stage('Archive Artifacts') {
+        stage('Stash Artifact') {
             agent { label 'build-node' }
             steps {
                 script {
-                    echo "Archiving the built artifact..."
-                    archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                    echo "Stashing the built WAR file..."
+                    stash name: 'war-file', includes: 'target/*.war'
                 }
             }
         }
@@ -71,6 +65,9 @@ pipeline {
             agent { label 'deploy-node' }
             steps {
                 script {
+                    echo "Fetching the WAR file from stash..."
+                    unstash 'war-file'
+
                     echo "Deploying to Apache Tomcat on the deploy node..."
                     sh """
                         # Stop Tomcat using Catalina script
@@ -80,11 +77,11 @@ pipeline {
                         sleep 5
 
                         # Remove old deployment
-                        sudo rm -rf /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT.war
-                        sudo rm -rf /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT/
+                        sudo rm -rf ${DEPLOY_DIR}ROOT.war
+                        sudo rm -rf ${DEPLOY_DIR}ROOT/
 
                         # Move the new WAR file
-                        sudo mv /home/ec2-user/*.war /home/ec2-user/apache-tomcat-9.0.102/webapps/ROOT.war
+                        sudo mv target/*.war ${DEPLOY_DIR}ROOT.war
 
                         # Start Tomcat using Catalina script
                         sudo /home/ec2-user/apache-tomcat-9.0.102/bin/startup.sh
@@ -97,15 +94,9 @@ pipeline {
     post {
         success {
             echo "Deployment successful!"
-            mail to: 'your-email@example.com',
-                 subject: 'Jenkins Build and Deployment Success',
-                 body: "The latest build and deployment of ${APP_NAME} was successful!"
         }
         failure {
             echo "Deployment failed!"
-            mail to: 'your-email@example.com',
-                 subject: 'Jenkins Build and Deployment Failed',
-                 body: "The build and deployment of ${APP_NAME} failed. Please check the logs."
         }
     }
 }
