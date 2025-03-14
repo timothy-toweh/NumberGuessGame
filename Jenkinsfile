@@ -17,6 +17,7 @@ pipeline {
             agent { label 'build-node' }
             steps {
                 sh 'mvn clean package'
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
             }
         }
 
@@ -30,9 +31,10 @@ pipeline {
         stage('Deploy') {
             agent { label 'deploy-node' }
             steps {
+                copyArtifacts(projectName: 'test', filter: 'target/*.war', flatten: true)
                 sh '''
                 TOMCAT_DIR=/opt/tomcat9/webapps
-                WAR_FILE=target/NumberGuessGame.war
+                WAR_FILE=NumberGuessGame.war
                 
                 if [ -f "$WAR_FILE" ]; then
                     cp $WAR_FILE $TOMCAT_DIR/
