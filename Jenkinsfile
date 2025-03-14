@@ -11,7 +11,7 @@ pipeline {
         }
 
         stage('Deploy to Tomcat') {
-            agent { label 'tomcat-node' }  // Deploy directly on the Tomcat server
+            agent { label 'deploy-node' }  // Deploy directly on the Tomcat server
             steps {
                 sh '''
                 cp target/*.war /home/ec2-user/apache-tomcat-9.0.102/webapps/
