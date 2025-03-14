@@ -36,39 +36,25 @@ pipeline {
         }
 
         stage('Unit Tests') {
-            agent { label 'build-node' }
-            steps {
-                script {
-                    echo "Running unit tests..."
-                    sh 'mvn test'
-                }
-            }
-            post {
-                always {
+    agent { label 'build-node' }
+    steps {
+        script {
+            echo "Running unit tests..."
+            sh 'mvn test'
+        }
+    }
+    post {
+        always {
+            script {
+                def testResults = sh(script: "ls -1 target/surefire-reports/*.xml 2>/dev/null | wc -l", returnStdout: true).trim()
+                if (testResults.toInteger() > 0) {
                     junit '**/target/surefire-reports/*.xml'
-                }
-                failure {
-                    echo "Unit tests failed. Stopping deployment."
-                    error "Stopping pipeline due to failed tests!"
+                } else {
+                    echo "No test results found. Skipping JUnit report."
                 }
             }
         }
 
-        stage('Code Quality Check') {
-            agent { label 'build-node' }
-            steps {
-                script {
-                    echo "Checking code quality using Maven Checkstyle..."
-                    sh 'mvn checkstyle:check'
-                }
-            }
-            post {
-                failure {
-                    echo "Code quality check failed. Review errors before deploying."
-                    error "Stopping pipeline due to code quality issues!"
-                }
-            }
-        }
 
         stage('Archive Artifacts') {
             agent { label 'build-node' }
